@@ -13,7 +13,7 @@
 #ifdef __AVR__
 #include <avr/pgmspace.h>
 #endif
-#include "Adafruit_TFTLCD.h"
+#include "CodeAsm_TFTLCD.h"
 #include "pin_magic.h"
 #include "pins_arduino.h"
 #include "wiring_private.h"
@@ -21,7 +21,7 @@
 //#define TFTWIDTH   320
 //#define TFTHEIGHT  480
 
-#define TFTWIDTH 240
+#define TFTWIDTH 410
 #define TFTHEIGHT 320
 
 // LCD controller chip identifiers
@@ -35,11 +35,11 @@
 
 // Constructor for breakout board (configurable LCD control lines).
 // Can still use this w/shield, but parameters are ignored.
-Adafruit_TFTLCD::Adafruit_TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd,
+CodeAsm_TFTLCD::CodeAsm_TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd,
                                  uint8_t reset)
     : Adafruit_GFX(TFTWIDTH, TFTHEIGHT) {
 
-#ifndef USE_ADAFRUIT_SHIELD_PINOUT
+#ifndef USE_CODEASM_SHIELD_PINOUT
   // Convert pin numbers to registers and bitmasks
   _reset = reset;
 #ifdef __AVR__
@@ -88,14 +88,14 @@ Adafruit_TFTLCD::Adafruit_TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd,
 }
 
 // Constructor for shield (fixed LCD control lines)
-Adafruit_TFTLCD::Adafruit_TFTLCD(void) : Adafruit_GFX(TFTWIDTH, TFTHEIGHT) {
+CodeAsm_TFTLCD::CodeAsm_TFTLCD(void) : Adafruit_GFX(TFTWIDTH, TFTHEIGHT) {
   init();
 }
 
 // Initialization common to both shield & breakout configs
-void Adafruit_TFTLCD::init(void) {
+void CodeAsm_TFTLCD::init(void) {
 
-#ifdef USE_ADAFRUIT_SHIELD_PINOUT
+#ifdef USE_CODEASM_SHIELD_PINOUT
   CS_IDLE; // Set all control bits to idle state
   WR_IDLE;
   RD_IDLE;
@@ -316,7 +316,7 @@ static const uint16_t ILI932x_regValues[] PROGMEM = {
     0x0133, // Main screen turn on
 };
 
-void Adafruit_TFTLCD::begin(uint16_t id) {
+void CodeAsm_TFTLCD::begin(uint16_t id) {
   uint8_t i = 0;
 
   reset();
@@ -351,7 +351,7 @@ void Adafruit_TFTLCD::begin(uint16_t id) {
     writeRegister8(ILI9341_POWERCONTROL2, 0x10);
     writeRegister16(ILI9341_VCOMCONTROL1, 0x2B2B);
     writeRegister8(ILI9341_VCOMCONTROL2, 0xC0);
-    writeRegister8(ILI9341_MEMCONTROL, ILI9341_MADCTL_MY | ILI9341_MADCTL_BGR);
+    writeRegister8(ILI9341_MEMCONTROL, ILI9341_MADCTL_MX | ILI9341_MADCTL_MV | ILI9341_MADCTL_BGR);
     writeRegister8(ILI9341_PIXELFORMAT, 0x55);
     writeRegister16(ILI9341_FRAMECONTROL, 0x001B);
 
@@ -413,14 +413,14 @@ void Adafruit_TFTLCD::begin(uint16_t id) {
   }
 }
 
-void Adafruit_TFTLCD::reset(void) {
+void CodeAsm_TFTLCD::reset(void) {
 
   CS_IDLE;
   //  CD_DATA;
   WR_IDLE;
   RD_IDLE;
 
-#ifdef USE_ADAFRUIT_SHIELD_PINOUT
+#ifdef USE_CODEASM_SHIELD_PINOUT
   digitalWrite(5, LOW);
   delay(2);
   digitalWrite(5, HIGH);
@@ -444,7 +444,7 @@ void Adafruit_TFTLCD::reset(void) {
 // Sets the LCD address window (and address counter, on 932X).
 // Relevant to rect/screen fills and H/V lines.  Input coordinates are
 // assumed pre-sorted (e.g. x2 >= x1).
-void Adafruit_TFTLCD::setAddrWindow(int x1, int y1, int x2, int y2) {
+void CodeAsm_TFTLCD::setAddrWindow(int x1, int y1, int x2, int y2) {
   CS_ACTIVE;
   if (driver == ID_932X) {
 
@@ -462,13 +462,14 @@ void Adafruit_TFTLCD::setAddrWindow(int x1, int y1, int x2, int y2) {
       y = y1;
       break;
     case 1:
-      t = y1;
+      t  = y1;
       y1 = x1;
-      x1 = TFTWIDTH - 1 - y2;
+      if ( y2>(TFTWIDTH-1) ) y2 = (TFTWIDTH-1);
+      x1 = TFTWIDTH  - 1 - y2;
       y2 = x2;
-      x2 = TFTWIDTH - 1 - t;
-      x = x2;
-      y = y1;
+      x2 = TFTWIDTH  - 1 - t;
+      x  = x2;
+      y  = y1;
       break;
     case 2:
       t = x1;
@@ -486,6 +487,7 @@ void Adafruit_TFTLCD::setAddrWindow(int x1, int y1, int x2, int y2) {
       y1 = TFTHEIGHT - 1 - x2;
       x2 = y2;
       y2 = TFTHEIGHT - 1 - t;
+      if ( y2>(TFTWIDTH-1) ) y2 = (TFTWIDTH-1);
       x = x1;
       y = y2;
       break;
@@ -525,7 +527,7 @@ void Adafruit_TFTLCD::setAddrWindow(int x1, int y1, int x2, int y2) {
 // to save a few register writes on each pixel drawn, the lower-right
 // corner of the address window is reset after most fill operations, so
 // that drawPixel only needs to change the upper left each time.
-void Adafruit_TFTLCD::setLR(void) {
+void CodeAsm_TFTLCD::setLR(void) {
   CS_ACTIVE;
   writeRegisterPair(HX8347G_COLADDREND_HI, HX8347G_COLADDREND_LO, _width - 1);
   writeRegisterPair(HX8347G_ROWADDREND_HI, HX8347G_ROWADDREND_LO, _height - 1);
@@ -535,7 +537,7 @@ void Adafruit_TFTLCD::setLR(void) {
 // Fast block fill operation for fillScreen, fillRect, H/V line, etc.
 // Requires setAddrWindow() has previously been called to set the fill
 // bounds.  'len' is inclusive, MUST be >= 1.
-void Adafruit_TFTLCD::flood(uint16_t color, uint32_t len) {
+void CodeAsm_TFTLCD::flood(uint16_t color, uint32_t len) {
   uint16_t blocks;
   uint8_t i, hi = color >> 8, lo = color;
 
@@ -602,7 +604,7 @@ void Adafruit_TFTLCD::flood(uint16_t color, uint32_t len) {
   CS_IDLE;
 }
 
-void Adafruit_TFTLCD::drawFastHLine(int16_t x, int16_t y, int16_t length,
+void CodeAsm_TFTLCD::drawFastHLine(int16_t x, int16_t y, int16_t length,
                                     uint16_t color) {
   int16_t x2;
 
@@ -628,7 +630,7 @@ void Adafruit_TFTLCD::drawFastHLine(int16_t x, int16_t y, int16_t length,
     setLR();
 }
 
-void Adafruit_TFTLCD::drawFastVLine(int16_t x, int16_t y, int16_t length,
+void CodeAsm_TFTLCD::drawFastVLine(int16_t x, int16_t y, int16_t length,
                                     uint16_t color) {
   int16_t y2;
 
@@ -653,7 +655,7 @@ void Adafruit_TFTLCD::drawFastVLine(int16_t x, int16_t y, int16_t length,
     setLR();
 }
 
-void Adafruit_TFTLCD::fillRect(int16_t x1, int16_t y1, int16_t w, int16_t h,
+void CodeAsm_TFTLCD::fillRect(int16_t x1, int16_t y1, int16_t w, int16_t h,
                                uint16_t fillcolor) {
   int16_t x2, y2;
 
@@ -686,7 +688,7 @@ void Adafruit_TFTLCD::fillRect(int16_t x1, int16_t y1, int16_t w, int16_t h,
     setLR();
 }
 
-void Adafruit_TFTLCD::fillScreen(uint16_t color) {
+void CodeAsm_TFTLCD::fillScreen(uint16_t color) {
 
   if (driver == ID_932X) {
 
@@ -729,7 +731,7 @@ void Adafruit_TFTLCD::fillScreen(uint16_t color) {
   flood(color, (long)TFTWIDTH * (long)TFTHEIGHT);
 }
 
-void Adafruit_TFTLCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
+void CodeAsm_TFTLCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
 
   // Clip
   if ((x < 0) || (y < 0) || (x >= _width) || (y >= _height))
@@ -804,7 +806,7 @@ void Adafruit_TFTLCD::drawPixel(int16_t x, int16_t y, uint16_t color) {
 // externally by BMP examples.  Assumes that setWindowAddr() has
 // previously been set to define the bounds.  Max 255 pixels at
 // a time (BMP examples read in small chunks due to limited RAM).
-void Adafruit_TFTLCD::pushColors(uint16_t *data, uint8_t len, boolean first) {
+void CodeAsm_TFTLCD::pushColors(uint16_t *data, uint8_t len, boolean first) {
   uint16_t color;
   uint8_t hi, lo;
   CS_ACTIVE;
@@ -829,7 +831,7 @@ void Adafruit_TFTLCD::pushColors(uint16_t *data, uint8_t len, boolean first) {
   CS_IDLE;
 }
 
-void Adafruit_TFTLCD::setRotation(uint8_t x) {
+void CodeAsm_TFTLCD::setRotation(uint8_t x) {
 
   // Call parent rotation func first -- sets up rotation flags, etc.
   Adafruit_GFX::setRotation(x);
@@ -884,13 +886,13 @@ void Adafruit_TFTLCD::setRotation(uint8_t x) {
   if (driver == ID_9341) {
     // MEME, HX8357D uses same registers as 9341 but different values
     uint16_t t = 0;
-
+	rotation = 4;
     switch (rotation) {
     case 2:
       t = ILI9341_MADCTL_MX | ILI9341_MADCTL_BGR;
       break;
     case 3:
-      t = ILI9341_MADCTL_MV | ILI9341_MADCTL_BGR;
+      t = ILI9341_MADCTL_MV | ILI9341_MADCTL_BGR| ILI9341_MADCTL_ML;
       break;
     case 0:
       t = ILI9341_MADCTL_MY | ILI9341_MADCTL_BGR;
@@ -899,10 +901,14 @@ void Adafruit_TFTLCD::setRotation(uint8_t x) {
       t = ILI9341_MADCTL_MX | ILI9341_MADCTL_MY | ILI9341_MADCTL_MV |
           ILI9341_MADCTL_BGR;
       break;
+	case 4:
+	  t = ILI9341_MADCTL_MX | ILI9341_MADCTL_MV | ILI9341_MADCTL_ML;
+	  break;
     }
+	
     writeRegister8(ILI9341_MADCTL, t); // MADCTL
     // For 9341, init default full-screen address window:
-    setAddrWindow(0, 0, _width - 1, _height - 1); // CS_IDLE happens here
+    //setAddrWindow(0, 0, _width - 1, _height - 1); // CS_IDLE happens here
   }
 
   if (driver == ID_HX8357D) {
@@ -937,7 +943,7 @@ void Adafruit_TFTLCD::setRotation(uint8_t x) {
 // the read operation, reads the data, then restores the ports to the write
 // configuration.  Write operations happen a LOT, so it's advantageous to
 // leave the ports in that state as a default.
-uint16_t Adafruit_TFTLCD::readPixel(int16_t x, int16_t y) {
+uint16_t CodeAsm_TFTLCD::readPixel(int16_t x, int16_t y) {
 
   if ((x < 0) || (y < 0) || (x >= _width) || (y >= _height))
     return 0;
@@ -1005,7 +1011,7 @@ uint16_t Adafruit_TFTLCD::readPixel(int16_t x, int16_t y) {
 }
 
 // Ditto with the read/write port directions, as above.
-uint16_t Adafruit_TFTLCD::readID(void) {
+uint16_t CodeAsm_TFTLCD::readID(void) {
   uint16_t id;
 
   // retry a bunch!
@@ -1060,7 +1066,7 @@ uint16_t Adafruit_TFTLCD::readID(void) {
   return id;
 }
 
-uint32_t Adafruit_TFTLCD::readReg(uint8_t r) {
+uint32_t CodeAsm_TFTLCD::readReg(uint8_t r) {
   uint32_t id;
   uint8_t x;
 
@@ -1091,7 +1097,7 @@ uint32_t Adafruit_TFTLCD::readReg(uint8_t r) {
 }
 
 // Pass 8-bit (each) R,G,B, get back 16-bit packed color
-uint16_t Adafruit_TFTLCD::color565(uint8_t r, uint8_t g, uint8_t b) {
+uint16_t CodeAsm_TFTLCD::color565(uint8_t r, uint8_t g, uint8_t b) {
   return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
@@ -1099,11 +1105,11 @@ uint16_t Adafruit_TFTLCD::color565(uint8_t r, uint8_t g, uint8_t b) {
 // versions that reference the inline macros just once:
 
 #ifndef write8
-void Adafruit_TFTLCD::write8(uint8_t value) { write8inline(value); }
+void CodeAsm_TFTLCD::write8(uint8_t value) { write8inline(value); }
 #endif
 
 #ifdef read8isFunctionalized
-uint8_t Adafruit_TFTLCD::read8fn(void) {
+uint8_t CodeAsm_TFTLCD::read8fn(void) {
   uint8_t result;
   read8inline(result);
   return result;
@@ -1111,32 +1117,32 @@ uint8_t Adafruit_TFTLCD::read8fn(void) {
 #endif
 
 #ifndef setWriteDir
-void Adafruit_TFTLCD::setWriteDir(void) { setWriteDirInline(); }
+void CodeAsm_TFTLCD::setWriteDir(void) { setWriteDirInline(); }
 #endif
 
 #ifndef setReadDir
-void Adafruit_TFTLCD::setReadDir(void) { setReadDirInline(); }
+void CodeAsm_TFTLCD::setReadDir(void) { setReadDirInline(); }
 #endif
 
 #ifndef writeRegister8
-void Adafruit_TFTLCD::writeRegister8(uint8_t a, uint8_t d) {
+void CodeAsm_TFTLCD::writeRegister8(uint8_t a, uint8_t d) {
   writeRegister8inline(a, d);
 }
 #endif
 
 #ifndef writeRegister16
-void Adafruit_TFTLCD::writeRegister16(uint16_t a, uint16_t d) {
+void CodeAsm_TFTLCD::writeRegister16(uint16_t a, uint16_t d) {
   writeRegister16inline(a, d);
 }
 #endif
 
 #ifndef writeRegisterPair
-void Adafruit_TFTLCD::writeRegisterPair(uint8_t aH, uint8_t aL, uint16_t d) {
+void CodeAsm_TFTLCD::writeRegisterPair(uint8_t aH, uint8_t aL, uint16_t d) {
   writeRegisterPairInline(aH, aL, d);
 }
 #endif
 
-void Adafruit_TFTLCD::writeRegister24(uint8_t r, uint32_t d) {
+void CodeAsm_TFTLCD::writeRegister24(uint8_t r, uint32_t d) {
   CS_ACTIVE;
   CD_COMMAND;
   write8(r);
@@ -1150,7 +1156,7 @@ void Adafruit_TFTLCD::writeRegister24(uint8_t r, uint32_t d) {
   CS_IDLE;
 }
 
-void Adafruit_TFTLCD::writeRegister32(uint8_t r, uint32_t d) {
+void CodeAsm_TFTLCD::writeRegister32(uint8_t r, uint32_t d) {
   CS_ACTIVE;
   CD_COMMAND;
   write8(r);

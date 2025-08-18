@@ -1,29 +1,26 @@
 // IMPORTANT: SEE COMMENTS @ LINE 15 REGARDING SHIELD VS BREAKOUT BOARD USAGE.
 
-// Graphics library by ladyada/adafruit with init code from Rossum
+// Graphics library by ladyada/Adafruit with init code from Rossum
+// Modified by CodeAsm for use with my specific display
 // MIT license
 
-#ifndef _ADAFRUIT_TFTLCD_H_
-#define _ADAFRUIT_TFTLCD_H_
+#ifndef _CodeAsm_TFTLCD_H_
+#define _CodeAsm_TFTLCD_H_
 
-#if ARDUINO >= 100
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
 #include <Adafruit_GFX.h>
 
 // **** IF USING THE LCD BREAKOUT BOARD, COMMENT OUT THIS NEXT LINE. ****
 // **** IF USING THE LCD SHIELD, LEAVE THE LINE ENABLED:             ****
 
-//#define USE_ADAFRUIT_SHIELD_PINOUT 1
+//#define USE_CodeAsm_SHIELD_PINOUT 1
 
-class Adafruit_TFTLCD : public Adafruit_GFX {
+class CodeAsm_TFTLCD : public Adafruit_GFX {
 
 public:
-  Adafruit_TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t rst);
-  Adafruit_TFTLCD(void);
+  CodeAsm_TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t rst);
+  CodeAsm_TFTLCD(void);
 
   void begin(uint16_t id = 0x9325);
   void drawPixel(int16_t x, int16_t y, uint16_t color);
@@ -43,6 +40,9 @@ public:
       readPixel(int16_t x, int16_t y), readID(void);
   uint32_t readReg(uint8_t r);
 
+  // Make writeRegister8 public
+  void writeRegister8(uint8_t a, uint8_t d);
+
 private:
   void init(),
   // These items may have previously been defined as macros
@@ -55,9 +55,6 @@ private:
 #endif
 #ifndef setReadDir
       setReadDir(void),
-#endif
-#ifndef writeRegister8
-      writeRegister8(uint8_t a, uint8_t d),
 #endif
 #ifndef writeRegister16
       writeRegister16(uint16_t a, uint16_t d),
@@ -75,7 +72,7 @@ private:
 #define read8isFunctionalized
 #endif
 
-#ifndef USE_ADAFRUIT_SHIELD_PINOUT
+#ifndef USE_CODEASM_SHIELD_PINOUT
 
 #ifdef __AVR__
   volatile uint8_t *csPort, *cdPort, *wrPort, *rdPort;
