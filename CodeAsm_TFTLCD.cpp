@@ -21,8 +21,8 @@
 //#define TFTWIDTH   320
 //#define TFTHEIGHT  480
 
-#define TFTWIDTH 320
-#define TFTHEIGHT 410
+#define TFTWIDTH 310
+#define TFTHEIGHT 400
 
 // LCD controller chip identifiers
 #define ID_932X 0
@@ -115,6 +115,8 @@ void CodeAsm_TFTLCD::init(void) {
   textcolor = 0xFFFF;
   _width = TFTWIDTH;
   _height = TFTHEIGHT;
+
+
 }
 
 // Initialization command tables for different LCD controllers
@@ -358,6 +360,8 @@ void CodeAsm_TFTLCD::begin(uint16_t id) {
     writeRegister8(ILI9341_ENTRYMODE, 0x07);
     /* writeRegister32(ILI9341_DISPLAYFUNC, 0x0A822700);*/
 
+
+
     writeRegister8(ILI9341_SLEEPOUT, 0);
     delay(150);
     writeRegister8(ILI9341_DISPLAYON, 0);
@@ -411,6 +415,35 @@ void CodeAsm_TFTLCD::begin(uint16_t id) {
     driver = ID_UNKNOWN;
     return;
   }
+}
+
+void CodeAsm_TFTLCD::setScrollMargins(uint16_t top, uint16_t bottom) {
+  	uint16_t middle = TFTHEIGHT - top - bottom;
+    writeRegister16(0x33, top);    // VSCRDEF command: top fixed area
+    writeRegister16(0x33, middle); // middle scrollable area
+    writeRegister16(0x33, bottom); // bottom fixed area
+}
+
+void CodeAsm_TFTLCD::scrollTo(int16_t dx, int16_t dy) {
+  // Scroll the display by dx, dy pixels.
+  // dx is horizontal scroll, dy is vertical scroll.
+  // dx is ignored for 932X, as it does not support horizontal scrolling.
+  // For 7575, dx is ignored as well, but dy is used to set the vertical scroll
+  // offset.
+  if (driver == ID_932X) {
+	writeRegister16(0x0060, dy); // Set vertical scroll offset
+	writeRegister16(0x0061, 0);   // Set horizontal scroll offset to zero
+	writeRegister16(0x006A, 0);   // Set vertical scroll area to full screen
+	writeRegister8(0x0022, 0x00); // Write to GRAM
+  } else if (driver == ID_7575) {
+	//writeRegister16(HX8347G_VSCRDEF_HI, HX8347G_VSCRDEF_LO, dy);
+	//writeRegister8(HX8347G_VSCRSADD, 0);
+  } else if ((driver == ID_9341) || (driver == ID_HX8357D)) {
+		/// Set some full screen scrolling TODO: proper location and name for this setup?
+	 // Vertical Scrolling Definition: TFA=0, VSA=320, BFA=0
+    writeRegister16(ILI9341_VSCRSADD, dy); // VSCRSADD command
+	
+    }
 }
 
 void CodeAsm_TFTLCD::reset(void) {
